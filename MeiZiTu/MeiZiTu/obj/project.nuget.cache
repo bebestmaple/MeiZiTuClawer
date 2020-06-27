@@ -1,11 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "fp+qd/4eRo2TXWdHlAeejLNMLuZ/+tFYjJ3K/wehTpGK3kW7rOd11Ghf12rSFPh+oXgCS3NDdt2m+U+oiaVkoQ==",
+  "dgSpecHash": "Shv4vJgHGC9KVxb5kDkZNqIOIka+R8Kh1vBRwM0mjBQXF5uIdt8PDGMTmjAHJCC1WEttHwIVHqhahEu/nZn+8Q==",
   "success": true,
   "projectFilePath": "E:\\repos\\MeiZiTuClawer\\MeiZiTu\\MeiZiTu\\MeiZiTu.csproj",
-  "expectedPackageFiles": [
-    "C:\\Users\\Admin\\.nuget\\packages\\htmlagilitypack\\1.11.24\\htmlagilitypack.1.11.24.nupkg.sha512",
-    "C:\\Users\\Admin\\.nuget\\packages\\restsharp\\106.11.4\\restsharp.106.11.4.nupkg.sha512"
-  ],
+  "expectedPackageFiles": [],
   "logs": []
 }
