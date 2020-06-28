@@ -1,6 +1,0 @@
-E:\repos\MeiZiTuClawer\MeiZiTu\MeiZiTu\bin\Debug\netcoreapp3.1\MeiZiTu.exe
-E:\repos\MeiZiTuClawer\MeiZiTu\MeiZiTu\obj\Debug\netcoreapp3.1\MeiZiTu.csprojAssemblyReference.cache
-E:\repos\MeiZiTuClawer\MeiZiTu\MeiZiTu\obj\Debug\netcoreapp3.1\MeiZiTu.AssemblyInfoInputs.cache
-E:\repos\MeiZiTuClawer\MeiZiTu\MeiZiTu\obj\Debug\netcoreapp3.1\MeiZiTu.AssemblyInfo.cs
-E:\repos\MeiZiTuClawer\MeiZiTu\MeiZiTu\bin\Debug\netcoreapp3.1\HtmlAgilityPack.dll
-E:\repos\MeiZiTuClawer\MeiZiTu\MeiZiTu\obj\Debug\netcoreapp3.1\MeiZiTu.csproj.CopyComplete
