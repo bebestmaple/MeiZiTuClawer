@@ -79,94 +79,105 @@ namespace MeiZiTu
                             Url = hrefNode.GetAttributeValue("href", string.Empty),
                         }).Where(x => !string.IsNullOrEmpty(x.Title) && !string.IsNullOrEmpty(x.Url)).ToList();
 
-                        foreach (var imgInfo in imgInfoList)
+                        var wq = new WorkQueue();
+
+                        foreach (var item in imgInfoList)
                         {
-                            // 已存在该目录且目录里面有文件->跳过
-                            var isPass = false;
-                            if (allExistingPhotoDirArr.Contains(imgInfo.Title) && new DirectoryInfo($"{photoPath}/{imgInfo.Title}")?.GetFiles()?.Count() > 0)
-                            {
-                                isPass = true;
-                            }
-                            if (!isPass)
-                            {
-                                var savePah = $"{photoPath}/{imgInfo.Title}";
-                                try
-                                {
-                                    if (!Directory.Exists(savePah))
-                                    {
-                                        Directory.CreateDirectory(savePah);
-                                    }
-                                }
-                                catch (Exception ex)
-                                {
-                                    Console.WriteLine($"创建文件夹【{savePah}】时发生错误:{ex}");
-                                    return;
-                                }
-                                Console.WriteLine($"正在抓取【{imgInfo.Title}】");
+                            var imgInfo = item;
 
-                                var imgClient = new RestClient
+                            wq.Enqueue(async () =>
+                            {
+                                // 已存在该目录且目录里面有文件->跳过
+                                var isPass = false;
+                                if (allExistingPhotoDirArr.Contains(imgInfo.Title) && new DirectoryInfo($"{photoPath}/{imgInfo.Title}")?.GetFiles()?.Count() > 0)
                                 {
-                                    UserAgent = userAgent,
-                                };
-                                imgClient.AddDefaultHeaders(headers);
-                                var imgReq = new RestRequest(imgInfo.Url, Method.GET);
-                                var imgRes = await imgClient.ExecuteAsync(imgReq);
-                                if (imgRes.IsSuccessful)
+                                    isPass = true;
+                                }
+                                if (!isPass)
                                 {
-                                    var imgContent = imgRes.Content;
-                                    if (!string.IsNullOrEmpty(imgContent))
+                                    var savePah = $"{photoPath}/{imgInfo.Title}";
+                                    try
                                     {
-                                        var imgPageDoc = new HtmlAgilityPack.HtmlDocument();
-                                        imgPageDoc.LoadHtml(imgContent);
-                                        var imgPageDocNode = imgPageDoc.DocumentNode;
-
-                                        var maxPageStr = imgPageDocNode.SelectSingleNode("//div[@class='pagenavi']/a[last()-1]/span")?.InnerText;
-                                        if (int.TryParse(maxPageStr, out var maxPage) && maxPage >= 1)
+                                        if (!Directory.Exists(savePah))
                                         {
-                                            for (var currentPage = 1; currentPage <= maxPage; currentPage++)
-                                            {
-                                                Console.WriteLine($"正在抓取【{imgInfo.Title}】{currentPage}/{maxPage}");
-                                                var currentPageImgClient = new RestClient
-                                                {
-                                                    UserAgent = userAgent,
-                                                };
-                                                currentPageImgClient.AddDefaultHeaders(headers);
-                                                var currentPageImgReq = new RestRequest($"{imgInfo.Url}/{currentPage}", Method.GET);
-                                                var currentPageImgRes = await currentPageImgClient.ExecuteAsync(currentPageImgReq);
-                                                if (currentPageImgRes.IsSuccessful)
-                                                {
-                                                    var currentPageImgContent = currentPageImgRes.Content;
-                                                    if (!string.IsNullOrEmpty(currentPageImgContent))
-                                                    {
-                                                        var currentPageImgDoc = new HtmlAgilityPack.HtmlDocument();
-                                                        currentPageImgDoc.LoadHtml(imgContent);
-                                                        var currentPageImgDocNode = currentPageImgDoc.DocumentNode;
+                                            Directory.CreateDirectory(savePah);
+                                        }
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        Console.WriteLine($"创建文件夹【{savePah}】时发生错误:{ex}");
+                                        return;
+                                    }
+                                    Console.WriteLine($"正在抓取【{imgInfo.Title}】");
 
-                                                        var imgSrc = currentPageImgDocNode.SelectSingleNode("//div[@class='main-image']/p/a/img").GetAttributeValue("src", string.Empty);
-                                                        if (!string.IsNullOrEmpty(imgSrc))
+                                    var imgClient = new RestClient
+                                    {
+                                        UserAgent = userAgent,
+                                    };
+                                    imgClient.AddDefaultHeaders(headers);
+                                    var imgReq = new RestRequest(imgInfo.Url, Method.GET);
+                                    var imgRes = await imgClient.ExecuteAsync(imgReq);
+                                    if (imgRes.IsSuccessful)
+                                    {
+                                        var imgContent = imgRes.Content;
+                                        if (!string.IsNullOrEmpty(imgContent))
+                                        {
+                                            var imgPageDoc = new HtmlAgilityPack.HtmlDocument();
+                                            imgPageDoc.LoadHtml(imgContent);
+                                            var imgPageDocNode = imgPageDoc.DocumentNode;
+
+                                            var maxPageStr = imgPageDocNode.SelectSingleNode("//div[@class='pagenavi']/a[last()-1]/span")?.InnerText;
+                                            if (int.TryParse(maxPageStr, out var maxPage) && maxPage >= 1)
+                                            {
+                                                for (var currentPage = 1; currentPage <= maxPage; currentPage++)
+                                                {
+                                                    Console.WriteLine($"正在抓取【{imgInfo.Title}】{currentPage}/{maxPage}");
+                                                    var currentPageImgClient = new RestClient
+                                                    {
+                                                        UserAgent = userAgent,
+                                                    };
+                                                    currentPageImgClient.AddDefaultHeaders(headers);
+                                                    var currentPageImgReq = new RestRequest($"{imgInfo.Url}/{currentPage}", Method.GET);
+                                                    var currentPageImgRes = await currentPageImgClient.ExecuteAsync(currentPageImgReq);
+                                                    if (currentPageImgRes.IsSuccessful)
+                                                    {
+                                                        var currentPageImgContent = currentPageImgRes.Content;
+                                                        if (!string.IsNullOrEmpty(currentPageImgContent))
                                                         {
-                                                            var imgDownloadClient = new RestClient
+                                                            var currentPageImgDoc = new HtmlAgilityPack.HtmlDocument();
+                                                            currentPageImgDoc.LoadHtml(imgContent);
+                                                            var currentPageImgDocNode = currentPageImgDoc.DocumentNode;
+
+                                                            var imgSrc = currentPageImgDocNode.SelectSingleNode("//div[@class='main-image']/p/a/img").GetAttributeValue("src", string.Empty);
+                                                            if (!string.IsNullOrEmpty(imgSrc))
                                                             {
-                                                                UserAgent = userAgent,
-                                                            };
-                                                            imgDownloadClient.AddDefaultHeaders(headers);
-                                                            using var writer = File.OpenWrite($"{savePah}/{currentPage}.jpg");
-                                                            var imgDownloadReq = new RestRequest(imgSrc)
-                                                            {
-                                                                ResponseWriter = responseStream =>
+                                                                var imgDownloadClient = new RestClient
                                                                 {
-                                                                    using (responseStream)
+                                                                    UserAgent = userAgent,
+                                                                };
+                                                                imgDownloadClient.AddDefaultHeaders(headers);
+                                                                using var writer = File.OpenWrite($"{savePah}/{currentPage}.jpg");
+                                                                var imgDownloadReq = new RestRequest(imgSrc)
+                                                                {
+                                                                    ResponseWriter = responseStream =>
                                                                     {
-                                                                        responseStream.CopyTo(writer);
+                                                                        using (responseStream)
+                                                                        {
+                                                                            responseStream.CopyTo(writer);
+                                                                        }
                                                                     }
-                                                                }
-                                                            };
-                                                            var response = imgDownloadClient.DownloadData(imgDownloadReq);
+                                                                };
+                                                                var response = imgDownloadClient.DownloadData(imgDownloadReq);
+                                                            }
                                                         }
                                                     }
                                                 }
+                                                Console.WriteLine($"【{imgInfo.Title}】共{maxPage}抓取完毕");
                                             }
-                                            Console.WriteLine($"【{imgInfo.Title}】共{maxPage}抓取完毕");
+                                            else
+                                            {
+                                                Console.WriteLine($"【{imgInfo.Title}】抓取失败");
+                                            }
                                         }
                                         else
                                         {
@@ -180,13 +191,9 @@ namespace MeiZiTu
                                 }
                                 else
                                 {
-                                    Console.WriteLine($"【{imgInfo.Title}】抓取失败");
+                                    Console.WriteLine($"【{imgInfo.Title}】跳过");
                                 }
-                            }
-                            else
-                            {
-                                Console.WriteLine($"【{imgInfo.Title}】跳过");
-                            }
+                            });
                         }
                     }
                     else
