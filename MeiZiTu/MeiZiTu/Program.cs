@@ -1,4 +1,5 @@
-﻿using RestSharp;
+﻿using Newtonsoft.Json.Linq;
+using RestSharp;
 using RestSharp.Extensions;
 using System;
 using System.Collections.Generic;
@@ -36,6 +37,7 @@ namespace MeiZiTu
             var allPageClient = new RestClient
             {
                 UserAgent = userAgent,
+                Proxy= new System.Net.WebProxy(await GetProxyAsync())
             };
             allPageClient.AddDefaultHeaders(headers);
             var allPageReq = new RestRequest($"{baseUrl}all", Method.GET);
@@ -51,6 +53,37 @@ namespace MeiZiTu
                     allPageDoc.LoadHtml(allPageContent);
                     var allPageDocNode = allPageDoc.DocumentNode;
                     var hrefNodes = allPageDocNode.SelectNodes("//ul[@class='archives']/li/p[@class='url']/a");
+
+                    {
+                        var oldPageClient = new RestClient
+                        {
+                            UserAgent = userAgent,
+                            Proxy = new System.Net.WebProxy(await GetProxyAsync())
+                        };
+                        oldPageClient.AddDefaultHeaders(headers);
+                        var oldPageReq = new RestRequest($"{baseUrl}old", Method.GET);
+                        var oldPgaeRes = await oldPageClient.ExecuteAsync(oldPageReq);
+                        if (oldPgaeRes.IsSuccessful)
+                        {
+                            var oldPageContent = oldPgaeRes.Content;
+                            if (!string.IsNullOrEmpty(oldPageContent))
+                            {
+                                var oldPageDoc = new HtmlAgilityPack.HtmlDocument();
+                                oldPageDoc.LoadHtml(oldPageContent);
+                                var oldPageDocNode = oldPageDoc.DocumentNode;
+                                var oldHrefNodes = oldPageDocNode.SelectNodes("//ul[@class='archives']/li/p[@class='url']/a");
+                                if (oldHrefNodes.Count > 0)
+                                {
+                                    foreach (var oldHref in oldHrefNodes)
+                                    {
+                                        hrefNodes.Add(oldHref);
+                                    }
+                                }
+                            }
+                        }
+
+                    }
+
 
                     if (hrefNodes.Count > 0)
                     {
@@ -79,105 +112,97 @@ namespace MeiZiTu
                             Url = hrefNode.GetAttributeValue("href", string.Empty),
                         }).Where(x => !string.IsNullOrEmpty(x.Title) && !string.IsNullOrEmpty(x.Url)).ToList();
 
-                        var wq = new WorkQueue();
-
-                        foreach (var item in imgInfoList)
+                        foreach (var imgInfo in imgInfoList)
                         {
-                            var imgInfo = item;
-
-                            wq.Enqueue(async () =>
+                            // 已存在该目录且目录里面有文件->跳过
+                            var isPass = false;
+                            if (allExistingPhotoDirArr.Contains(imgInfo.Title) && new DirectoryInfo($"{photoPath}/{imgInfo.Title}")?.GetFiles()?.Count() > 0)
                             {
-                                // 已存在该目录且目录里面有文件->跳过
-                                var isPass = false;
-                                if (allExistingPhotoDirArr.Contains(imgInfo.Title) && new DirectoryInfo($"{photoPath}/{imgInfo.Title}")?.GetFiles()?.Count() > 0)
+                                isPass = true;
+                            }
+                            if (!isPass)
+                            {
+                                var savePah = $"{photoPath}/{imgInfo.Title}";
+                                try
                                 {
-                                    isPass = true;
+                                    if (!Directory.Exists(savePah))
+                                    {
+                                        Directory.CreateDirectory(savePah);
+                                    }
                                 }
-                                if (!isPass)
+                                catch (Exception ex)
                                 {
-                                    var savePah = $"{photoPath}/{imgInfo.Title}";
-                                    try
-                                    {
-                                        if (!Directory.Exists(savePah))
-                                        {
-                                            Directory.CreateDirectory(savePah);
-                                        }
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        Console.WriteLine($"创建文件夹【{savePah}】时发生错误:{ex}");
-                                        return;
-                                    }
-                                    Console.WriteLine($"正在抓取【{imgInfo.Title}】");
+                                    Console.WriteLine($"创建文件夹【{savePah}】时发生错误:{ex}");
+                                    return;
+                                }
+                                Console.WriteLine($"正在抓取【{imgInfo.Title}】");
 
-                                    var imgClient = new RestClient
+                                var imgClient = new RestClient
+                                {
+                                    UserAgent = userAgent,
+                                    Proxy = new System.Net.WebProxy(await GetProxyAsync())
+                                };
+                                imgClient.AddDefaultHeaders(headers);
+                                var imgReq = new RestRequest(imgInfo.Url, Method.GET);
+                                var imgRes = await imgClient.ExecuteAsync(imgReq);
+                                if (imgRes.IsSuccessful)
+                                {
+                                    var imgContent = imgRes.Content;
+                                    if (!string.IsNullOrEmpty(imgContent))
                                     {
-                                        UserAgent = userAgent,
-                                    };
-                                    imgClient.AddDefaultHeaders(headers);
-                                    var imgReq = new RestRequest(imgInfo.Url, Method.GET);
-                                    var imgRes = await imgClient.ExecuteAsync(imgReq);
-                                    if (imgRes.IsSuccessful)
-                                    {
-                                        var imgContent = imgRes.Content;
-                                        if (!string.IsNullOrEmpty(imgContent))
-                                        {
-                                            var imgPageDoc = new HtmlAgilityPack.HtmlDocument();
-                                            imgPageDoc.LoadHtml(imgContent);
-                                            var imgPageDocNode = imgPageDoc.DocumentNode;
+                                        var imgPageDoc = new HtmlAgilityPack.HtmlDocument();
+                                        imgPageDoc.LoadHtml(imgContent);
+                                        var imgPageDocNode = imgPageDoc.DocumentNode;
 
-                                            var maxPageStr = imgPageDocNode.SelectSingleNode("//div[@class='pagenavi']/a[last()-1]/span")?.InnerText;
-                                            if (int.TryParse(maxPageStr, out var maxPage) && maxPage >= 1)
+                                        var maxPageStr = imgPageDocNode.SelectSingleNode("//div[@class='pagenavi']/a[last()-1]/span")?.InnerText;
+                                        if (int.TryParse(maxPageStr, out var maxPage) && maxPage >= 1)
+                                        {
+                                            for (var currentPage = 1; currentPage <= maxPage; currentPage++)
                                             {
-                                                for (var currentPage = 1; currentPage <= maxPage; currentPage++)
+                                                Console.WriteLine($"正在抓取【{imgInfo.Title}】{currentPage}/{maxPage}");
+                                                var currentPageImgClient = new RestClient
                                                 {
-                                                    Console.WriteLine($"正在抓取【{imgInfo.Title}】{currentPage}/{maxPage}");
-                                                    var currentPageImgClient = new RestClient
+                                                    UserAgent = userAgent,
+                                                    Proxy = new System.Net.WebProxy(await GetProxyAsync())
+                                                };
+                                                currentPageImgClient.AddDefaultHeaders(headers);
+                                                var currentPageImgReq = new RestRequest($"{imgInfo.Url}/{currentPage}", Method.GET);
+                                                var currentPageImgRes = await currentPageImgClient.ExecuteAsync(currentPageImgReq);
+                                                if (currentPageImgRes.IsSuccessful)
+                                                {
+                                                    var currentPageImgContent = currentPageImgRes.Content;
+                                                    if (!string.IsNullOrEmpty(currentPageImgContent))
                                                     {
-                                                        UserAgent = userAgent,
-                                                    };
-                                                    currentPageImgClient.AddDefaultHeaders(headers);
-                                                    var currentPageImgReq = new RestRequest($"{imgInfo.Url}/{currentPage}", Method.GET);
-                                                    var currentPageImgRes = await currentPageImgClient.ExecuteAsync(currentPageImgReq);
-                                                    if (currentPageImgRes.IsSuccessful)
-                                                    {
-                                                        var currentPageImgContent = currentPageImgRes.Content;
-                                                        if (!string.IsNullOrEmpty(currentPageImgContent))
-                                                        {
-                                                            var currentPageImgDoc = new HtmlAgilityPack.HtmlDocument();
-                                                            currentPageImgDoc.LoadHtml(imgContent);
-                                                            var currentPageImgDocNode = currentPageImgDoc.DocumentNode;
+                                                        var currentPageImgDoc = new HtmlAgilityPack.HtmlDocument();
+                                                        currentPageImgDoc.LoadHtml(imgContent);
+                                                        var currentPageImgDocNode = currentPageImgDoc.DocumentNode;
 
-                                                            var imgSrc = currentPageImgDocNode.SelectSingleNode("//div[@class='main-image']/p/a/img").GetAttributeValue("src", string.Empty);
-                                                            if (!string.IsNullOrEmpty(imgSrc))
+                                                        var imgSrc = currentPageImgDocNode.SelectSingleNode("//div[@class='main-image']/p/a/img").GetAttributeValue("src", string.Empty);
+                                                        if (!string.IsNullOrEmpty(imgSrc))
+                                                        {
+                                                            var imgDownloadClient = new RestClient
                                                             {
-                                                                var imgDownloadClient = new RestClient
+                                                                UserAgent = userAgent,
+                                                                Proxy = new System.Net.WebProxy(await GetProxyAsync())
+                                                            };
+                                                            imgDownloadClient.AddDefaultHeaders(headers);
+                                                            using var writer = File.OpenWrite($"{savePah}/{currentPage}.jpg");
+                                                            var imgDownloadReq = new RestRequest(imgSrc)
+                                                            {
+                                                                ResponseWriter = responseStream =>
                                                                 {
-                                                                    UserAgent = userAgent,
-                                                                };
-                                                                imgDownloadClient.AddDefaultHeaders(headers);
-                                                                using var writer = File.OpenWrite($"{savePah}/{currentPage}.jpg");
-                                                                var imgDownloadReq = new RestRequest(imgSrc)
-                                                                {
-                                                                    ResponseWriter = responseStream =>
+                                                                    using (responseStream)
                                                                     {
-                                                                        using (responseStream)
-                                                                        {
-                                                                            responseStream.CopyTo(writer);
-                                                                        }
+                                                                        responseStream.CopyTo(writer);
                                                                     }
-                                                                };
-                                                                var response = imgDownloadClient.DownloadData(imgDownloadReq);
-                                                            }
+                                                                }
+                                                            };
+                                                            var response = imgDownloadClient.DownloadData(imgDownloadReq);
                                                         }
                                                     }
                                                 }
-                                                Console.WriteLine($"【{imgInfo.Title}】共{maxPage}抓取完毕");
                                             }
-                                            else
-                                            {
-                                                Console.WriteLine($"【{imgInfo.Title}】抓取失败");
-                                            }
+                                            Console.WriteLine($"【{imgInfo.Title}】共{maxPage}抓取完毕");
                                         }
                                         else
                                         {
@@ -191,9 +216,13 @@ namespace MeiZiTu
                                 }
                                 else
                                 {
-                                    Console.WriteLine($"【{imgInfo.Title}】跳过");
+                                    Console.WriteLine($"【{imgInfo.Title}】抓取失败");
                                 }
-                            });
+                            }
+                            else
+                            {
+                                Console.WriteLine($"【{imgInfo.Title}】跳过");
+                            }
                         }
                     }
                     else
@@ -216,6 +245,36 @@ namespace MeiZiTu
             }
             return fileName;
         }
+
+
+
+        static async Task<string> GetProxyAsync()
+        {
+            ////http://173.82.26.97:5010/get/
+            //var client = new RestClient();
+            //var req = new RestRequest("http://173.82.26.97:5010/get/", Method.GET);
+            //var res = await client.ExecuteAsync(req);
+            //if (res.IsSuccessful)
+            //{
+            //    var jobj = Newtonsoft.Json.JsonConvert.DeserializeObject<JObject>(res.Content);
+            //    return jobj["proxy"].ToString();
+            //}
+            //return string.Empty;
+
+            var client = new RestClient();
+            var req = new RestRequest("https://ip.jiangxianli.com/api/proxy_ip", Method.GET);
+            var res = await client.ExecuteAsync(req);
+            if (res.IsSuccessful)
+            {
+                var jobj = Newtonsoft.Json.JsonConvert.DeserializeObject<JObject>(res.Content);
+                var data = jobj["data"] as JObject;
+                return $"{data["protocol"]}://{data["ip"]}:{data["port"]}";
+
+            }
+
+            return string.Empty;
+        }
+
 
         class ImageInfo
         {
