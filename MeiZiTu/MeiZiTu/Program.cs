@@ -37,7 +37,6 @@ namespace MeiZiTu
             var allPageClient = new RestClient
             {
                 UserAgent = userAgent,
-                //Proxy= new System.Net.WebProxy(await GetProxyAsync())
             };
             allPageClient.AddDefaultHeaders(headers);
             var allPageReq = new RestRequest($"{baseUrl}all", Method.GET);
@@ -60,7 +59,6 @@ namespace MeiZiTu
                         var oldPageClient = new RestClient
                         {
                             UserAgent = userAgent,
-                           // Proxy = new System.Net.WebProxy(await GetProxyAsync())
                         };
                         oldPageClient.AddDefaultHeaders(headers);
                         var oldPageReq = new RestRequest($"{baseUrl}old", Method.GET);
@@ -142,7 +140,6 @@ namespace MeiZiTu
                                 var imgClient = new RestClient
                                 {
                                     UserAgent = userAgent,
-                                  //  Proxy = new System.Net.WebProxy(await GetProxyAsync())
                                 };
                                 imgClient.AddDefaultHeaders(headers);
                                 var imgReq = new RestRequest(imgInfo.Url, Method.GET);
@@ -165,7 +162,6 @@ namespace MeiZiTu
                                                 var currentPageImgClient = new RestClient
                                                 {
                                                     UserAgent = userAgent,
-                                                  //  Proxy = new System.Net.WebProxy(await GetProxyAsync())
                                                 };
                                                 currentPageImgClient.AddDefaultHeaders(headers);
                                                 var currentPageImgReq = new RestRequest($"{imgInfo.Url}/{currentPage}", Method.GET);
@@ -177,7 +173,7 @@ namespace MeiZiTu
                                                     if (!string.IsNullOrEmpty(currentPageImgContent))
                                                     {
                                                         var currentPageImgDoc = new HtmlAgilityPack.HtmlDocument();
-                                                        currentPageImgDoc.LoadHtml(imgContent);
+                                                        currentPageImgDoc.LoadHtml(currentPageImgContent);
                                                         var currentPageImgDocNode = currentPageImgDoc.DocumentNode;
 
                                                         var imgSrc = currentPageImgDocNode.SelectSingleNode("//div[@class='main-image']/p/a/img").GetAttributeValue("src", string.Empty);
@@ -186,7 +182,6 @@ namespace MeiZiTu
                                                             var imgDownloadClient = new RestClient
                                                             {
                                                                 UserAgent = userAgent,
-                                                               // Proxy = new System.Net.WebProxy(await GetProxyAsync())
                                                             };
                                                             Thread.Sleep(1000 * 5);
                                                             imgDownloadClient.AddDefaultHeaders(headers);
@@ -250,34 +245,6 @@ namespace MeiZiTu
             return fileName;
         }
 
-
-
-        static async Task<string> GetProxyAsync()
-        {
-            ////http://173.82.26.97:5010/get/
-            //var client = new RestClient();
-            //var req = new RestRequest("http://173.82.26.97:5010/get/", Method.GET);
-            //var res = await client.ExecuteAsync(req);
-            //if (res.IsSuccessful)
-            //{
-            //    var jobj = Newtonsoft.Json.JsonConvert.DeserializeObject<JObject>(res.Content);
-            //    return jobj["proxy"].ToString();
-            //}
-            //return string.Empty;
-
-            var client = new RestClient();
-            var req = new RestRequest("https://ip.jiangxianli.com/api/proxy_ip", Method.GET);
-            var res = await client.ExecuteAsync(req);
-            if (res.IsSuccessful)
-            {
-                var jobj = Newtonsoft.Json.JsonConvert.DeserializeObject<JObject>(res.Content);
-                var data = jobj["data"] as JObject;
-                return $"{data["protocol"]}://{data["ip"]}:{data["port"]}";
-
-            }
-
-            return string.Empty;
-        }
 
 
         class ImageInfo
