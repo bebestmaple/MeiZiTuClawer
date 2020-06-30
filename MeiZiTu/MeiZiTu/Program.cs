@@ -37,7 +37,7 @@ namespace MeiZiTu
             var allPageClient = new RestClient
             {
                 UserAgent = userAgent,
-                Proxy= new System.Net.WebProxy(await GetProxyAsync())
+                //Proxy= new System.Net.WebProxy(await GetProxyAsync())
             };
             allPageClient.AddDefaultHeaders(headers);
             var allPageReq = new RestRequest($"{baseUrl}all", Method.GET);
@@ -46,6 +46,7 @@ namespace MeiZiTu
             var allPgaeRes = await allPageClient.ExecuteAsync(allPageReq);
             if (allPgaeRes.IsSuccessful)
             {
+                Thread.Sleep(1000 * 5);
                 var allPageContent = allPgaeRes.Content;
                 if (!string.IsNullOrEmpty(allPageContent))
                 {
@@ -55,10 +56,11 @@ namespace MeiZiTu
                     var hrefNodes = allPageDocNode.SelectNodes("//ul[@class='archives']/li/p[@class='url']/a");
 
                     {
+                        Thread.Sleep(1000 * 5);
                         var oldPageClient = new RestClient
                         {
                             UserAgent = userAgent,
-                            Proxy = new System.Net.WebProxy(await GetProxyAsync())
+                           // Proxy = new System.Net.WebProxy(await GetProxyAsync())
                         };
                         oldPageClient.AddDefaultHeaders(headers);
                         var oldPageReq = new RestRequest($"{baseUrl}old", Method.GET);
@@ -136,11 +138,11 @@ namespace MeiZiTu
                                     return;
                                 }
                                 Console.WriteLine($"正在抓取【{imgInfo.Title}】");
-
+                                Thread.Sleep(1000 * 5);
                                 var imgClient = new RestClient
                                 {
                                     UserAgent = userAgent,
-                                    Proxy = new System.Net.WebProxy(await GetProxyAsync())
+                                  //  Proxy = new System.Net.WebProxy(await GetProxyAsync())
                                 };
                                 imgClient.AddDefaultHeaders(headers);
                                 var imgReq = new RestRequest(imgInfo.Url, Method.GET);
@@ -163,10 +165,11 @@ namespace MeiZiTu
                                                 var currentPageImgClient = new RestClient
                                                 {
                                                     UserAgent = userAgent,
-                                                    Proxy = new System.Net.WebProxy(await GetProxyAsync())
+                                                  //  Proxy = new System.Net.WebProxy(await GetProxyAsync())
                                                 };
                                                 currentPageImgClient.AddDefaultHeaders(headers);
                                                 var currentPageImgReq = new RestRequest($"{imgInfo.Url}/{currentPage}", Method.GET);
+                                                Thread.Sleep(1000 * 5);
                                                 var currentPageImgRes = await currentPageImgClient.ExecuteAsync(currentPageImgReq);
                                                 if (currentPageImgRes.IsSuccessful)
                                                 {
@@ -183,8 +186,9 @@ namespace MeiZiTu
                                                             var imgDownloadClient = new RestClient
                                                             {
                                                                 UserAgent = userAgent,
-                                                                Proxy = new System.Net.WebProxy(await GetProxyAsync())
+                                                               // Proxy = new System.Net.WebProxy(await GetProxyAsync())
                                                             };
+                                                            Thread.Sleep(1000 * 5);
                                                             imgDownloadClient.AddDefaultHeaders(headers);
                                                             using var writer = File.OpenWrite($"{savePah}/{currentPage}.jpg");
                                                             var imgDownloadReq = new RestRequest(imgSrc)
